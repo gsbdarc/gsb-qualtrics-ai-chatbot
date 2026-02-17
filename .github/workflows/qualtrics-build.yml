@@ -1,0 +1,135 @@
+name: Build Qualtrics Survey
+
+on:
+  workflow_dispatch:
+    inputs:
+      debug_mode:
+        description: "Enable verbose diagnostics in logs"
+        required: false
+        default: false
+        type: boolean
+      survey_name:
+        description: "Survey name in Qualtrics"
+        required: true
+        default: "test_1"
+      question_name:
+        description: "Unique name for this chat question (e.g. Chat_GPT4, Chat_Mini)"
+        required: true
+        default: "chat_ui"
+      prompt:
+        description: "System prompt for the chatbot"
+        required: false
+        default: "You are a helpful assistant"
+      model:
+        description: "Select LLM Model"
+        required: true
+        default: "gpt-4o"
+        type: choice        # <--- This creates the dropdown
+        options:
+          - gpt-4o
+          - gpt-4o-mini     # Corrected from gpt-4.omini
+          - claude-4-sonnet # (Make sure your proxy supports this!)
+          - gpt-5           # (Future proofing?)
+          - gpt-5-mini
+      temperature:
+        description: "Model temperature (0.0 - 2.0)"
+        required: false
+        default: "1"
+      max_tokens:
+        description: "Max response tokens"
+        required: false
+        default: "1000"
+      max_chats:
+        description: "Max user conversation turns"
+        required: false
+        default: "99"
+      delay_per_word:
+        description: "Seconds per word of delay before showing bot response (simulates typing speed, 0 for instant)"
+        required: false
+        default: "0.05"
+
+jobs:
+  build-survey:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize run summary
+        run: |
+          {
+            echo "## Build Qualtrics Survey Summary"
+            echo "- Debug mode: ${{ inputs.debug_mode == true && 'enabled' || 'disabled' }}"
+            echo "- Requested survey build: started"
+          } >> $GITHUB_STEP_SUMMARY
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          
+      - name: Install Dependencies
+        run: pip install requests
+
+      # --- Authenticate to Google Cloud (Required to read Terraform State) ---
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      - name: Record auth success
+        run: 'echo "- Google Cloud auth: success" >> $GITHUB_STEP_SUMMARY'
+
+      # --- Setup Terraform ---
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # --- Fetch the URL from the Terraform State Bucket ---
+      - name: Fetch Proxy URL from Terraform State
+        id: get-url
+        working-directory: ./terraform   # <--- Ensures we run terraform commands in the right folder
+        run: |
+          # Initialize using the bucket where state is stored
+          terraform init -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" >/dev/null
+          
+          # Extract the output variable
+          PROXY_URL=$(terraform output -raw function_url)
+          
+          # Save to GitHub Actions Output
+          echo "proxy_url=$PROXY_URL" >> $GITHUB_OUTPUT
+          echo "- Terraform state lookup: proxy URL retrieved" >> $GITHUB_STEP_SUMMARY
+
+      # --- Run the Python Build Script ---
+      - name: Build/Update Qualtrics Survey
+        env:
+          # Secrets
+          QUALTRICS_API_TOKEN: ${{ secrets.QUALTRICS_API_TOKEN }}
+          QUALTRICS_DATA_CENTER: ${{ vars.QUALTRICS_DATA_CENTER }}
+          
+          # The URL we just fetched
+          PROXY_URL: ${{ steps.get-url.outputs.proxy_url }}
+          
+          # Inputs from the dropdown
+          SURVEY_NAME: ${{ inputs.survey_name }}
+          QUESTION_NAME: ${{ inputs.question_name }}
+          PROMPT: ${{ inputs.prompt }}
+          MODEL: ${{ inputs.model }}
+          TEMPERATURE: ${{ inputs.temperature }}
+          MAX_TOKENS: ${{ inputs.max_tokens }}
+          MAX_CHATS: ${{ inputs.max_chats }}
+          DELAY_PER_WORD: ${{ inputs.delay_per_word }}
+          
+          # Debug logging (explicit opt-in)
+          LOG_LEVEL: ${{ inputs.debug_mode == true && 'DEBUG' || 'INFO' }}
+          VERBOSE_FIELD_LOGS: ${{ inputs.debug_mode == true && 'true' || 'false' }}
+        run: |
+          python qualtrics_code/build_survey.py
+
+      - name: Record build success
+        if: ${{ success() }}
+        run: |
+          {
+            echo "- Survey build: success"
+            echo "- Requested survey build: completed"
+          } >> $GITHUB_STEP_SUMMARY

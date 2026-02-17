@@ -1,0 +1,200 @@
+name: Terraform Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      debug_mode:
+        description: "Enable verbose diagnostics in logs"
+        required: false
+        default: false
+        type: boolean
+
+env:
+  TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize run summary
+        run: |
+          {
+            echo "## Terraform Deploy Summary"
+            echo "- Debug mode: ${{ inputs.debug_mode == true && 'enabled' || 'disabled' }}"
+          } >> $GITHUB_STEP_SUMMARY
+
+      - name: 🔍 Debug - Show Repository Files
+        if: ${{ inputs.debug_mode == true }}
+        run: |
+          echo "=== Current folder ==="
+          pwd
+          echo "=== Listing all files ==="
+          ls -R
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      - name: Record auth success
+        run: 'echo "- Google Cloud auth: success" >> $GITHUB_STEP_SUMMARY'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Check and create state bucket if needed
+        run: |
+          if ! gsutil ls -b "gs://${{ env.TF_STATE_BUCKET }}" >/dev/null 2>&1; then
+            echo "State bucket not found. Creating..."
+            gsutil mb -l us-west1 "gs://${{ env.TF_STATE_BUCKET }}" >/dev/null
+            gsutil versioning set on "gs://${{ env.TF_STATE_BUCKET }}" >/dev/null
+            echo "State bucket created with versioning enabled."
+            echo "- State bucket: created (versioning enabled)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "State bucket already exists."
+            echo "- State bucket: already exists" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        working-directory: terraform
+        env:
+          BACKEND_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+        run: |
+          terraform init \
+            -backend-config="bucket=${BACKEND_BUCKET}" >/dev/null
+          echo "- Terraform backend init: success" >> $GITHUB_STEP_SUMMARY
+
+      - name: Import existing resources if needed
+        working-directory: terraform
+        env:
+          TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
+          TF_VAR_endpoint_key: ${{ secrets.ENDPOINT_KEY }}
+          TF_VAR_stanford_api_key: ${{ secrets.STANFORD_API_KEY }}
+          TF_VAR_allowed_origins: ${{ secrets.ALLOWED_ORIGINS }}
+        run: |
+          PROJECT_ID="${TF_VAR_project_id}"
+          REGION="us-west1"
+          SOURCE_BUCKET_STATUS="not_found"
+          FUNCTION_STATUS="not_found"
+          
+          # Import source bucket if it exists but isn't in state
+          BUCKET_NAME="${PROJECT_ID}-function-source"
+          if gsutil ls -b "gs://${BUCKET_NAME}" >/dev/null 2>&1; then
+            SOURCE_BUCKET_STATUS="exists"
+            if ! terraform state list | grep -q "google_storage_bucket.source_bucket"; then
+              echo "Importing existing source bucket into Terraform state..."
+              if terraform import google_storage_bucket.source_bucket "${BUCKET_NAME}" >/dev/null 2>&1; then
+                SOURCE_BUCKET_STATUS="imported"
+              else
+                SOURCE_BUCKET_STATUS="import_failed_or_already_managed"
+              fi
+            else
+              SOURCE_BUCKET_STATUS="already_in_state"
+            fi
+          fi
+          
+          # Import Cloud Function if it exists but isn't in state
+          FUNCTION_NAME="stanford-proxy-v2"
+          if gcloud functions describe "${FUNCTION_NAME}" --gen2 --region="${REGION}" --format="value(name)" >/dev/null 2>&1; then
+            FUNCTION_STATUS="exists"
+            if ! terraform state list | grep -q "google_cloudfunctions2_function.default"; then
+              echo "Importing existing Cloud Function into Terraform state..."
+              if terraform import google_cloudfunctions2_function.default "projects/${PROJECT_ID}/locations/${REGION}/functions/${FUNCTION_NAME}" >/dev/null 2>&1; then
+                FUNCTION_STATUS="imported"
+              else
+                FUNCTION_STATUS="import_failed_or_already_managed"
+              fi
+            else
+              FUNCTION_STATUS="already_in_state"
+            fi
+          fi
+          
+          echo "Import reconciliation completed."
+          echo "- Import reconciliation: source_bucket=${SOURCE_BUCKET_STATUS}; cloud_function=${FUNCTION_STATUS}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Bootstrap APIs
+        working-directory: terraform
+        env:
+          # We export these as env vars so we can reference them in the command below
+          TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
+          TF_VAR_endpoint_key: ${{ secrets.ENDPOINT_KEY }}
+          TF_VAR_stanford_api_key: ${{ secrets.STANFORD_API_KEY }}
+          TF_VAR_allowed_origins: ${{ secrets.ALLOWED_ORIGINS }}
+        run: |
+          echo "Bootstrapping APIs to prevent Chicken-and-Egg error..."
+          
+          # We must provide dummy values or real values for ALL required variables
+          # so Terraform doesn't stop to ask for input.
+          terraform apply \
+            -target="google_project_service.gcp_services" \
+            -var="project_id=${TF_VAR_project_id}" \
+            -var="stanford_api_key=${TF_VAR_stanford_api_key}" \
+            -var="endpoint_key=${TF_VAR_endpoint_key}" \
+            -auto-approve \
+            -no-color || true
+          
+      - name: Terraform Plan
+        working-directory: terraform
+        env:
+          TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
+          TF_VAR_endpoint_key: ${{ secrets.ENDPOINT_KEY }}
+          TF_VAR_stanford_api_key: ${{ secrets.STANFORD_API_KEY }}
+          TF_VAR_allowed_origins: ${{ secrets.ALLOWED_ORIGINS }}
+          DEBUG_MODE: ${{ inputs.debug_mode }}
+        run: |
+          if [ "${DEBUG_MODE}" = "true" ]; then
+            terraform plan -no-color
+            echo "- Terraform plan: completed (verbose mode)" >> $GITHUB_STEP_SUMMARY
+          else
+            set +e
+            terraform plan -detailed-exitcode -no-color -compact-warnings >/tmp/terraform-plan.log 2>&1
+            PLAN_EXIT=$?
+            set -e
+            if [ "${PLAN_EXIT}" -eq 0 ]; then
+              echo "Terraform plan completed: no changes."
+              echo "- Terraform plan: no changes" >> $GITHUB_STEP_SUMMARY
+            elif [ "${PLAN_EXIT}" -eq 2 ]; then
+              echo "Terraform plan completed: changes detected."
+              echo "- Terraform plan: changes detected" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "Terraform plan failed. Re-run with debug_mode=true for detailed output."
+              exit "${PLAN_EXIT}"
+            fi
+          fi
+
+      - name: 🔍 Debug - Check Zip Contents
+        if: ${{ inputs.debug_mode == true }}
+        run: |
+          echo "=== Zip file exists? ==="
+          ls -la /tmp/function-source.zip
+          echo "=== Zip contents ==="
+          unzip -l /tmp/function-source.zip
+
+      - name: Terraform Apply
+        working-directory: terraform
+        env:
+          TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
+          TF_VAR_endpoint_key: ${{ secrets.ENDPOINT_KEY }}
+          TF_VAR_stanford_api_key: ${{ secrets.STANFORD_API_KEY }}
+          TF_VAR_allowed_origins: ${{ secrets.ALLOWED_ORIGINS }}
+          DEBUG_MODE: ${{ inputs.debug_mode }}
+        run: |
+          if [ "${DEBUG_MODE}" = "true" ]; then
+            terraform apply -auto-approve -no-color
+          else
+            terraform apply -auto-approve -no-color >/tmp/terraform-apply.log 2>&1
+          fi
+          echo "- Terraform apply: success" >> $GITHUB_STEP_SUMMARY
