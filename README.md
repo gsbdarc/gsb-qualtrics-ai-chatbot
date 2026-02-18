@@ -1,8 +1,8 @@
 # Stanford GSB Qualtrics AI Chatbot
 
-This guide walks you through setting up an AI chatbot within a Qualtrics survey, powered by a backend built in Google Cloud and LLMs provided by Stanford AI Playground. This implementation is currently being used by the [Stanford GSB Behavioral Lab](https://www.gsb.stanford.edu/faculty-research/behavioral-lab).
+This guide walks you through setting up an AI chatbot within a Qualtrics survey, powered by a backend built in Google Cloud and LLMs provided by Stanford AI Playground. This implementation is currently being used by the <a href="https://www.gsb.stanford.edu/faculty-research/behavioral-lab" target="_blank" rel="noopener noreferrer">Stanford GSB Behavioral Lab</a>.
 
-A presentation on this implementation was given on February 18, 2026 as a Hub How-To titled [AI Integration in Qualtrics](https://gsbresearchhub.stanford.edu/training-workshops?search=ai+integration+in+qualtrics).
+A presentation on this implementation was given on February 18, 2026 as a Hub How-To titled <a href="https://gsbresearchhub.stanford.edu/training-workshops?search=ai+integration+in+qualtrics" target="_blank" rel="noopener noreferrer">AI Integration in Qualtrics</a>.
 - Zoom Recording
 - Slides
 
@@ -21,10 +21,10 @@ This repository creates a secure "middle-man" (proxy) within Google Cloud betwee
 
 ## What You Will Need Before Starting
 
-1. **Stanford Google Cloud account** with a valid Project-Task-Award (PTA) -- [File UIT Request Here](https://stanford.service-now.com/it_services?id=sc_cat_item&sys_id=fa9f80bddbf05b401df130cf9d96198b)
+1. **Stanford Google Cloud account** with a valid Project-Task-Award (PTA) -- <a href="https://stanford.service-now.com/it_services?id=sc_cat_item&sys_id=fa9f80bddbf05b401df130cf9d96198b" target="_blank" rel="noopener noreferrer">File UIT Request Here</a>
 2. **GitHub account** to clone this repository
-3. **Stanford AI Playground API Key** (starts with `sk-...`) -- [File UIT Request Here](https://stanford.service-now.com/it_services?id=sc_cat_item&sys_id=fd75ec563b90265079a53434c3e45a65)
-4. **Stanford Qualtrics account** with API access enabled -- [Set up Qualtrics Account Here](https://uit.stanford.edu/qualtrics/account)
+3. **Stanford AI Playground API Key** (starts with `sk-...`) -- <a href="https://stanford.service-now.com/it_services?id=sc_cat_item&sys_id=fd75ec563b90265079a53434c3e45a65" target="_blank" rel="noopener noreferrer">File UIT Request Here</a>
+4. **Stanford Qualtrics account** with API access enabled -- <a href="https://uit.stanford.edu/qualtrics/account" target="_blank" rel="noopener noreferrer">Set up Qualtrics Account Here</a>
 
 ---
 
@@ -32,8 +32,8 @@ This repository creates a secure "middle-man" (proxy) within Google Cloud betwee
 
 ### Step 1.1 — Create a Stanford Google Cloud Project
 
-1. File a Stanford UIT request [here](https://stanford.service-now.com/it_services?id=sc_cat_item&sys_id=fa9f80bddbf05b401df130cf9d96198b), with a valid Stanford Project-Task-Award (PTA) in hand. Fill out an appropriate Project Name, which will be used later.
-2. Once created, navigate to the [Google Cloud Console](https://console.cloud.google.com/welcome?) and **write down your Project ID**. You can find it on the console page in the upper-left hand corner and it looks something like `gsb-[project_name]`. You will need this later.
+1. File a Stanford UIT request <a href="https://stanford.service-now.com/it_services?id=sc_cat_item&sys_id=fa9f80bddbf05b401df130cf9d96198b" target="_blank" rel="noopener noreferrer">here</a>, with a valid Stanford Project-Task-Award (PTA) in hand. Fill out an appropriate Project Name, which will be used later.
+2. Once created, navigate to the <a href="https://console.cloud.google.com/welcome?" target="_blank" rel="noopener noreferrer">Google Cloud Console</a> and **write down your Project ID**. You can find it on the console page in the upper-left hand corner and it looks something like `gsb-[project_name]`. You will need this later.
 
 ### Step 1.2 — Create a Service Account (the "Robot" that deploys for you via GitHub)
 
@@ -70,7 +70,7 @@ You will need two pieces of information from Qualtrics.
 
 ### Step 2.1 — Find Your API Token
 
-1. Log into [Qualtrics](http://stanforduniversity.qualtrics.com/)
+1. Log into <a href="http://stanforduniversity.qualtrics.com/" target="_blank" rel="noopener noreferrer">Qualtrics</a>
 2. Click your profile icon (top right) > **Account Settings**
 3. Go to the **User Settings** section
 4. Find and copy your **API Token**
@@ -215,7 +215,7 @@ To turn it back on, change it back to `"true"` and re-deploy.
 ### View logs for debugging
 1. In `terraform/main.tf`, change `ENABLE_LOGGING` from `"false"` to `"true"`
 2. Commit, push, and re-run **Terraform Deploy**
-3. Go to [Google Cloud Console](https://console.cloud.google.com/) > **Cloud Functions** > click your function > **Logs**
+3. Go to <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer">Google Cloud Console</a> > **Cloud Functions** > click your function > **Logs**
 
 ### Temporarily enable verbose workflow diagnostics
 Use this only when troubleshooting workflow failures:
@@ -247,6 +247,6 @@ Use this only when troubleshooting workflow failures:
 
 ## Need Help?
 
-If you're stuck, [create an issue](https://github.com/gsbdarc/gsb-qualtrics-ai-chatbot/issues/new/choose) and provide the following:
+If you're stuck, <a href="https://github.com/gsbdarc/gsb-qualtrics-ai-chatbot/issues/new/choose" target="_blank" rel="noopener noreferrer">create an issue</a> and provide the following:
 1. Which **Phase/Step** you're on
 2. A **screenshot** of the error (from GitHub Actions logs or Google Cloud Console)
