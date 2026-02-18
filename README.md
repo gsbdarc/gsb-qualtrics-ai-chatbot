@@ -2,7 +2,7 @@
 
 This guide walks you through setting up an AI chatbot within a Qualtrics survey, powered by a backend built in Google Cloud and LLMs provided by Stanford AI Playground. This implementation is currently being used by the [Stanford GSB Behavioral Lab](https://www.gsb.stanford.edu/faculty-research/behavioral-lab).
 
-A presentation on this implementation was given on February 18, 2026 as a Hub How-To titled AI Integration in Qualtrics.
+A presentation on this implementation was given on February 18, 2026 as a Hub How-To titled [AI Integration in Qualtrics](https://gsbresearchhub.stanford.edu/training-workshops?search=ai+integration+in+qualtrics).
 - Zoom Recording
 - Slides
 
