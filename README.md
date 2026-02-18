@@ -11,6 +11,8 @@ This repository creates a secure "middle-man" (proxy) within Google Cloud betwee
 - You get security controls within the Google Cloud proxy such as rate and volume limits based on IP address
 - You can perform one-click deployments to generate Qualtrics survey questions with an AI chatbot and to build the Google Cloud proxy infrastructure
 
+![Overview of the infrastructure](infrastructure-overview.png)
+
 ---
 
 ## What You Will Need Before Starting
