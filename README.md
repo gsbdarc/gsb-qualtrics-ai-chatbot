@@ -145,9 +145,30 @@ This step builds all of the Google Cloud resources (the proxy function, database
 
 ---
 
-## Phase 5: Build Your Qualtrics Survey 🛠️
+## Phase 5: Create Your Qualtrics Survey 📋
 
-This step creates (or updates) a Qualtrics survey that is wired up to your AI proxy. Each workflow run adds **one chat question** to a survey. You can run it multiple times with different question names to add multiple AI chat questions to the same survey — each with its own model, prompt, and settings.
+Before wiring up the AI chatbot, you need to create a survey in Qualtrics and find its **Survey ID**.
+
+### Step 5.1 — Create a New Survey
+
+1. Log into [Qualtrics](http://stanforduniversity.qualtrics.com/)
+2. Click **Create new project** > **Survey** > **Blank survey**
+3. Give your survey a name (e.g. `My AI Chatbot Study`)
+4. Click **Create project** — Qualtrics will open the survey editor
+
+### Step 5.2 — Find Your Survey ID
+
+1. Look at your browser's address bar while the survey editor is open. The URL looks something like:
+   `https://stanfordgsb.yul1.qualtrics.com/survey-builder/SV_1Ll5d8kcWzt30rQ/edit`
+2. The **Survey ID** is the `SV_...` portion in the middle of the URL — in this example, `SV_1Ll5d8kcWzt30rQ`
+3. It always starts with `SV_` followed by alphanumeric characters
+4. **Copy this value** — you will paste it in the next phase
+
+---
+
+## Phase 6: Build Your Qualtrics Survey 🛠️
+
+This step configures your Qualtrics survey (created in Phase 5) to work with your AI proxy. Each workflow run adds **one chat question** to the survey. You can run it multiple times with different question names to add multiple AI chat questions to the same survey — each with its own model, prompt, and settings.
 
 1. In your GitHub repository, click the **Actions** tab
 2. In the left sidebar, click **Build Qualtrics Survey**
@@ -156,7 +177,7 @@ This step creates (or updates) a Qualtrics survey that is wired up to your AI pr
 
 | Field | What It Means | Suggested Value |
 |-------|--------------|-----------------|
-| **Survey name** | The name that will appear in Qualtrics | e.g. `My AI Chatbot Study` |
+| **Survey ID** | The Survey ID you copied in Step 5.2 (starts with `SV_`) | e.g. `SV_1Ll5d8kcWzt30rQ` |
 | **Question name** | A unique name for this chat question. Use a different name for each AI chat you want in the survey. | e.g. `Chat_GPT4` or `Chat_Mini` |
 | **System prompt** | Instructions that tell the AI how to behave for this question | e.g. `You are a helpful research assistant` |
 | **Select LLM Model** | Which Stanford AI Playground model to use for this question (dropdown) | `gpt-4o` is recommended |
@@ -168,14 +189,14 @@ This step creates (or updates) a Qualtrics survey that is wired up to your AI pr
 5. Click the green **Run workflow** button
 6. Wait for completion (1-2 minutes)
 7. Review the **Build Qualtrics Survey Summary** for high-level run status
-8. When done, log into Qualtrics — your new survey (or updated question) should be there!
+8. When done, log into Qualtrics — your survey should now have the AI chat question!
 
 ### Adding Multiple AI Chat Questions to One Survey
 
-You can add as many chat questions as you want to a single survey. Just run the workflow again with the **same survey name** but a **different question name**. For example:
+You can add as many chat questions as you want to a single survey. Just run the workflow again with the **same Survey ID** but a **different question name**. For example:
 
-- **Run 1:** Survey = `My Study`, Question = `Chat_GPT4`, Model = `gpt-4o`, Prompt = "You are a helpful assistant"
-- **Run 2:** Survey = `My Study`, Question = `Chat_Mini`, Model = `gpt-4o-mini`, Prompt = "You are a concise assistant"
+- **Run 1:** Survey ID = `SV_1Ll5d8kcWzt30rQ`, Question = `Chat_GPT4`, Model = `gpt-4o`, Prompt = "You are a helpful assistant"
+- **Run 2:** Survey ID = `SV_1Ll5d8kcWzt30rQ`, Question = `Chat_Mini`, Model = `gpt-4o-mini`, Prompt = "You are a concise assistant"
 
 Each question gets its own model, prompt, temperature, token limit, and conversation limit. Chat histories are saved separately per question (e.g. `chat_history_Chat_GPT4`, `chat_history_Chat_Mini`).
 
@@ -183,7 +204,7 @@ Each question gets its own model, prompt, temperature, token limit, and conversa
 
 ### Updating an Existing Question
 
-To change the model or prompt for an existing question, run the workflow again with the **same survey name and question name** but different settings. It will update the existing question's configuration without creating a duplicate.
+To change the model or prompt for an existing question, run the workflow again with the **same Survey ID and question name** but different settings. It will update the existing question's configuration without creating a duplicate.
 
 ---
 
@@ -200,7 +221,7 @@ Your setup is now:
 ## Common Tasks After Setup
 
 ### Re-run the survey builder with different settings
-Just repeat Phase 5 with new values. Use the same question name to update an existing question, or a new question name to add another chat question to the survey.
+Just repeat Phase 6 with the same Survey ID. Use the same question name to update an existing question, or a new question name to add another chat question to the survey.
 
 ### Turn off the proxy (to save money)
 If you're not actively running a study, you can disable the proxy so it costs nothing:

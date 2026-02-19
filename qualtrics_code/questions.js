@@ -60,7 +60,14 @@ Qualtrics.SurveyEngine.addOnReady(function () {
   }
 
   function showTypingIndicator() {
-    return appendMessage("...", "bot-message typing-indicator");
+    var chatBox = document.getElementById("chat-history-__QNSAFE__");
+    if (!chatBox) return null;
+    var el = document.createElement("div");
+    el.classList.add("message", "bot-message", "typing-indicator");
+    el.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+    chatBox.appendChild(el);
+    chatBox.scrollTop = chatBox.scrollHeight;
+    return el;
   }
 
   function removeTypingIndicator(el) {
