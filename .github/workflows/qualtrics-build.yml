@@ -26,8 +26,7 @@ on:
         default: "gpt-4o"
         type: choice        # <--- This creates the dropdown
         options:
-          - gpt-4o
-          - gpt-4o-mini     # Corrected from gpt-4.omini
+          - gpt-4.omini     # Corrected from gpt-4.omini
           - claude-4-sonnet # (Make sure your proxy supports this!)
           - gpt-5           # (Future proofing?)
           - gpt-5-mini
